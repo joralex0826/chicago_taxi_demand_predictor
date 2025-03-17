@@ -83,53 +83,68 @@ def merge_geo_and_ts_data(rides):
 def add_missing_slots(ts_data: pd.DataFrame) -> pd.DataFrame:
     """
     Add necessary rows to the input 'ts_data' to make sure the output
-    has a complete list of
+    has a complete list of:
     - pickup_hours
     - pickup_location
+    - pickup_longitude
+    - pickup_latitude
     """
     locations = ts_data['pickup_location'].unique()
     full_range = pd.date_range(
-        ts_data['pickup_hour'].min(), ts_data['pickup_hour'].max(), freq='h')
+        ts_data['pickup_hour'].min(), ts_data['pickup_hour'].max(), freq='h'
+    )
+    location_coords = (
+        ts_data[['pickup_location', 'pickup_longitude', 'pickup_latitude']]
+        .dropna()
+        .groupby('pickup_location')
+        .first()
+        .to_dict(orient='index')
+    )
 
     output = pd.DataFrame()
     for location in tqdm(locations):
+        ts_data_i = ts_data.loc[
+            ts_data.pickup_location == location,
+            ['pickup_hour', 'rides', 'pickup_longitude', 'pickup_latitude']
+        ].groupby('pickup_hour', as_index=False).first()
 
-        # keep only rides for this 'location'
-        ts_data_i = ts_data.loc[ts_data.pickup_location == location, ['pickup_hour', 'rides']]
-        
+        if location == "Outside Chicago":
+            pickup_longitude, pickup_latitude = 0.0, 0.0
+        else:
+            coords = location_coords.get(location, {'pickup_longitude': 0.0, 'pickup_latitude': 0.0})
+            pickup_longitude, pickup_latitude = coords['pickup_longitude'], coords['pickup_latitude']
+
         if ts_data_i.empty:
-            # add a dummy entry with a 0
             ts_data_i = pd.DataFrame.from_dict([
-                {'pickup_hour': ts_data['pickup_hour'].max(), 'rides': 0}
+                {'pickup_hour': ts_data['pickup_hour'].max(), 'rides': 0, 
+                 'pickup_longitude': pickup_longitude, 'pickup_latitude': pickup_latitude}
             ])
 
         ts_data_i.set_index('pickup_hour', inplace=True)
         ts_data_i.index = pd.DatetimeIndex(ts_data_i.index)
         ts_data_i = ts_data_i.reindex(full_range, fill_value=0)
-        
-        # add back `location` columns
+        ts_data_i['pickup_longitude'] = pickup_longitude
+        ts_data_i['pickup_latitude'] = pickup_latitude
         ts_data_i['pickup_location'] = location
 
         output = pd.concat([output, ts_data_i])
-    
-    # move the pickup_hour from the index to a dataframe column
+
     output = output.reset_index().rename(columns={'index': 'pickup_hour'})
-    
+    output.dropna(inplace=True)
+
     return output
 
-def transform_raw_data_into_ts_data(
-    rides: pd.DataFrame
-) -> pd.DataFrame:
+def transform_raw_data_into_ts_data(rides: pd.DataFrame) -> pd.DataFrame:
     """
-    transform raw data into time series data
+    Transform raw data into time-series data
     """
-    # sum rides per location and pickup_hour
     rides['pickup_hour'] = rides['pickup_datetime'].dt.round('h')
-    agg_rides = rides.groupby(['pickup_hour', 'pickup_location']).size().reset_index()
-    agg_rides.rename(columns={0: 'rides'}, inplace=True)
-
-    # add rows for (locations, pickup_hours)s with 0 rides
+    location_coords = rides.groupby('pickup_location')[['pickup_longitude', 'pickup_latitude']].first().reset_index()
+    location_coords.loc[location_coords['pickup_location'] == 'Outside Chicago', ['pickup_longitude', 'pickup_latitude']] = (0.0, 0.0)
+    agg_rides = rides.groupby(['pickup_hour', 'pickup_location']).size().reset_index(name='rides')
+    agg_rides = agg_rides.merge(location_coords, on='pickup_location', how='left')
     agg_rides_all_slots = add_missing_slots(agg_rides)
+    agg_rides_all_slots.dropna(inplace=True)
 
     return agg_rides_all_slots
 
@@ -155,6 +170,7 @@ def get_cutoff_indices_features_and_target(
 
         return indices
 
+
 def transform_ts_data_into_features_and_target(
     ts_data: pd.DataFrame,
     input_seq_len: int,
@@ -164,7 +180,7 @@ def transform_ts_data_into_features_and_target(
     Slices and transposes data from time-series format into a (features, target)
     format that we can use to train Supervised ML models
     """
-    assert set(ts_data.columns) == {'pickup_hour', 'rides', 'pickup_location'}
+    assert set(['pickup_hour', 'rides', 'pickup_location', 'pickup_longitude', 'pickup_latitude']).issubset(ts_data.columns)
 
     locations = ts_data['pickup_location'].unique()
     features = pd.DataFrame()
@@ -175,8 +191,12 @@ def transform_ts_data_into_features_and_target(
         # keep only ts data for this `location`
         ts_data_one_location = ts_data.loc[
             ts_data.pickup_location == location, 
-            ['pickup_hour', 'rides']
+            ['pickup_hour', 'rides', 'pickup_longitude', 'pickup_latitude']
         ].sort_values(by=['pickup_hour'])
+
+        # Obtener latitud y longitud (se toma el primer valor ya que es constante por ubicación)
+        pickup_longitude = ts_data_one_location['pickup_longitude'].iloc[0]
+        pickup_latitude = ts_data_one_location['pickup_latitude'].iloc[0]
 
         # pre-compute cutoff indices to split dataframe rows
         indices = get_cutoff_indices_features_and_target(
@@ -202,9 +222,11 @@ def transform_ts_data_into_features_and_target(
         )
         features_one_location['pickup_hour'] = pickup_hours
         features_one_location['pickup_location'] = location
+        features_one_location['pickup_longitude'] = pickup_longitude
+        features_one_location['pickup_latitude'] = pickup_latitude
 
         # numpy -> pandas
-        targets_one_location = pd.DataFrame(y, columns=[f'target_rides_next_hour'])
+        targets_one_location = pd.DataFrame(y, columns=['target_rides_next_hour'])
 
         # concatenate results
         features = pd.concat([features, features_one_location])
