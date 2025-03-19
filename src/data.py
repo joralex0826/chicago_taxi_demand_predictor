@@ -4,7 +4,7 @@ import numpy as np
 import geopandas as gpd
 from shapely.geometry import Point
 from shapely.wkt import loads
-from paths import RAW_DATA_DIR
+from src.paths import RAW_DATA_DIR
 from typing import Tuple
 
 

@@ -6,10 +6,9 @@ authors = [
     {name = "Jorge Alexander Fajardo",email = "joralex0826@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10,<3.13"
 dependencies = [
     "jupyter (>=1.1.1,<2.0.0)",
-    "pandas (>=2.2.3,<3.0.0)",
     "polars (>=1.24.0,<2.0.0)",
     "geopandas (>=1.0.1,<2.0.0)",
     "tqdm (>=4.67.1,<5.0.0)",
@@ -18,11 +17,15 @@ dependencies = [
     "scikit-learn (>=1.6.1,<2.0.0)",
     "xgboost (>=2.1.4,<3.0.0)",
     "lightgbm (>=4.6.0,<5.0.0)",
-    "optuna (>=4.2.1,<5.0.0)"
+    "optuna (>=4.2.1,<5.0.0)",
+    "dotenv (>=0.9.9,<0.10.0)",
+    "pandas (<2.2.0)",
+    "confluent-kafka (>=2.8.2,<3.0.0)",
+    "hopsworks (>=4.1.8,<5.0.0)",
 ]
 
 [tool.poetry]
-packages = [{include = "src", from = "src"}]
+packages = [{include = "src"}]
 
 
 [build-system]
