@@ -1,12 +1,12 @@
-[project]
+[tool.poetry]
 name = "src"
 version = "0.1.0"
 description = ""
-authors = [
-    {name = "Jorge Alexander Fajardo",email = "joralex0826@gmail.com"}
-]
+authors = ["Jorge Alexander Fajardo <joralex0826@gmail.com>"]
 readme = "README.md"
+packages = [{include = "src"}]
 requires-python = ">=3.10,<3.13"
+
 dependencies = [
     "jupyter (>=1.1.1,<2.0.0)",
     "polars (>=1.24.0,<2.0.0)",
@@ -24,10 +24,6 @@ dependencies = [
     "hopsworks (>=4.1.8,<5.0.0)",
     "gdown (>=5.2.0,<6.0.0)",
 ]
-
-[tool.poetry]
-packages = [{include = "src"}]
-
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
