@@ -6,12 +6,35 @@ from shapely.geometry import Point
 from shapely.wkt import loads
 from src.paths import RAW_DATA_DIR
 from typing import Tuple
+import os
+import gdown
+
+
+def download_taxi_data():
+    save_path = RAW_DATA_DIR / 'taxi_trips.parquet'
+    file_id = "1dj6DhNhELjnxjziXIGlo4FhPneXauFV8"
+    url = f"https://drive.google.com/uc?id={file_id}"
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    gdown.download(url, output=str(save_path), quiet=False) # quiet=False shows the download progress
+
+    print(f"Taxi data downloaded: {save_path}")
+
+
+def download_geo_data():
+    save_path = RAW_DATA_DIR / 'chicago_geo_data.parquet'
+    file_id = "1AqIi-XKEuLosLZbMYTGTRbWEOWotz_pZ"
+    url = f"https://drive.google.com/uc?id={file_id}"
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    gdown.download(url, output=str(save_path), quiet=False) # quiet=False shows the download progress
+
+    print(f"Geo data downloaded: {save_path}")
 
 
 def fetch_chicago_data():
     """
     Fetches Chicago data from a file.
     """
+    download_taxi_data()
     rides = pd.read_parquet(RAW_DATA_DIR / 'taxi_trips.parquet')
     
     return rides
@@ -63,6 +86,7 @@ def load_raw_data() -> pd.DataFrame:
         return rides_validated
     
 def load_geo_data():
+    download_geo_data()
     chicago_zones = pd.read_parquet(RAW_DATA_DIR / 'chicago_geo_data.parquet')
     chicago_zones["geometry"] = chicago_zones["the_geom"].apply(loads)
     chicago_zones = gpd.GeoDataFrame(chicago_zones, geometry="geometry", crs="EPSG:4326")
