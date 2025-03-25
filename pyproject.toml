@@ -4,8 +4,6 @@ version = "0.1.0"
 description = ""
 authors = ["Jorge Alexander Fajardo <joralex0826@gmail.com>"]
 readme = "README.md"
-requires-python = ">=3.10,<3.13"
-
 packages = [{include = "src"}]  
 
 [tool.poetry.dependencies]
