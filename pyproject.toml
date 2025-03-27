@@ -23,6 +23,7 @@ pandas = "<2.2.0"
 confluent-kafka = ">=2.8.2,<3.0.0"
 hopsworks = ">=4.1.8,<5.0.0"
 gdown = ">=5.2.0,<6.0.0"
+streamlit = "^1.44.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.5"
