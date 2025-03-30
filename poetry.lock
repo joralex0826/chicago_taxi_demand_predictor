@@ -1902,6 +1902,17 @@ pandas = ["pandas (>=0.24.0)"]
 scikit-learn = ["scikit-learn (>=0.24.2)"]
 
 [[package]]
+name = "logger"
+version = "1.4"
+description = "Python logging helper"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "logger-1.4.tar.gz", hash = "sha256:4ecac57133c6376fa215f0fe6b4dc4d60e4d1ad8be005cab4e8a702df682f8b3"},
+]
+
+[[package]]
 name = "mako"
 version = "1.3.9"
 description = "A super-fast templating language that borrows the best ideas from the existing templating languages."
@@ -4392,4 +4403,4 @@ scikit-learn = ["scikit-learn"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "6783622d3000a3c7ccd5929127c6d101d8e7261c87fdb47c9a3602536f0735d2"
+content-hash = "512e84fea62206b6682d17ac7844a9a63430abd0c9ef403ba18fdf3728681bd4"
