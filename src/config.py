@@ -21,8 +21,8 @@ FEATURE_GROUP_METADATA = FeatureGroupConfig(
     name='time_series_hourly_feature_group',
     version=1,
     description='Feature group with hourly time-series data of historical taxi rides',
-    primary_key=['pickup_location', 'pickup_ts'],
-    event_time='pickup_ts',
+    primary_key=['pickup_location', 'pickup_hour'],
+    event_time='pickup_hour',
     online_enabled=True,
 )
 
@@ -39,8 +39,8 @@ FEATURE_GROUP_PREDICTIONS_METADATA = FeatureGroupConfig(
     name='model_predictions_feature_group',
     version=1,
     description='Predictions generate by our production model',
-    primary_key=['pickup_location', 'pickup_ts'],
-    event_time='pickup_ts',
+    primary_key=['pickup_location', 'pickup_hour'],
+    event_time='pickup_hour',
 )
 
 MONITORING_FV_NAME = 'monitoring_feature_view'
