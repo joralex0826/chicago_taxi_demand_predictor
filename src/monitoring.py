@@ -68,16 +68,14 @@ def load_predictions_and_actual_values_from_store(
             on=['pickup_hour', 'pickup_location'],
             prefix="actuals_"  # Prefijo para evitar ambigüedad
         ) \
-        .filter(predictions_fg.pickup_hour >= from_ts) \
-        .filter(predictions_fg.pickup_hour <= to_ts)
+        #.filter(predictions_fg.pickup_hour >= from_ts) \
+        #.filter(predictions_fg.pickup_hour <= to_ts)
 
     
     # breakpoint()
 
     # create the feature view `config.FEATURE_VIEW_MONITORING` if it does not exist yet
     feature_store = get_feature_store()
-    print(query.show(5))
-    print(feature_store)
     try:
         logger.info('Creating monitoring feature view...')
 

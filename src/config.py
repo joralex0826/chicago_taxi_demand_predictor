@@ -45,3 +45,9 @@ FEATURE_GROUP_PREDICTIONS_METADATA = FeatureGroupConfig(
 
 MONITORING_FV_NAME = 'monitoring_feature_view'
 MONITORING_FV_VERSION = 1
+
+FEATURE_VIEW_PREDICTIONS_METADATA = FeatureViewConfig(
+    name='model_predictions_feature_view',
+    version=1,
+    feature_group=FEATURE_GROUP_PREDICTIONS_METADATA,
+)

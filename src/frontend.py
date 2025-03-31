@@ -1,5 +1,5 @@
 import zipfile
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import requests
 import numpy as np
@@ -11,7 +11,8 @@ import pydeck as pdk
 
 from src.inference import(
     load_batch_of_features_from_store,
-    load_predictions_from_store
+    load_model_from_registry,
+    get_model_predictions
 )
 
 from src.paths import DATA_DIR
@@ -26,7 +27,7 @@ st.header(f'{current_date}')
 
 progress_bar = st.sidebar.header('⚙️ Working Progress')
 progress_bar = st.sidebar.progress(0)
-N_STEPS = 6
+N_STEPS = 7
 
 import requests
 import zipfile
@@ -70,84 +71,28 @@ def load_shape_data_file() -> gpd.GeoDataFrame:
     return gpd.read_file(shapefile_path).to_crs("epsg:4326")
 
 
-@st.cache_data
-def _load_batch_of_features_from_store(current_date: datetime) -> pd.DataFrame:
-    """Wrapped version of src.inference.load_batch_of_features_from_store, so
-    we can add Streamlit caching
-
-    Args:
-        current_date (datetime): _description_
-
-    Returns:
-        pd.DataFrame: n_features + 2 columns:
-            - `rides_previous_N_hour`
-            - `rides_previous_{N-1}_hour`
-            - ...
-            - `rides_previous_1_hour`
-            - `pickup_hour`
-            - `pickup_location_id`
-    """
-    return load_batch_of_features_from_store(current_date)
-
-
-@st.cache_data
-def _load_predictions_from_store(
-    from_pickup_hour: datetime,
-    to_pickup_hour: datetime
-    ) -> pd.DataFrame:
-    """
-    Wrapped version of src.inference.load_predictions_from_store, so we
-    can add Streamlit caching
-
-    Args:
-        from_pickup_hour (datetime): min datetime (rounded hour) for which we want to get
-        predictions
-
-        to_pickup_hour (datetime): max datetime (rounded hour) for which we want to get
-        predictions
-
-    Returns:
-        pd.DataFrame: 2 columns: pickup_location_id, predicted_demand
-    """
-    return load_predictions_from_store(from_pickup_hour, to_pickup_hour)
-
-
 with st.spinner(text="Downloading shape file to plot taxi zones"):
     geo_df = load_shape_data_file()
     geo_df['community'] = geo_df['community'].str.lower().str.replace(r"[^a-z0-9\s]", "", regex=True)
     st.sidebar.write('✅ Shape file was downloaded ')
     progress_bar.progress(1/N_STEPS)
 
-with st.spinner(text="Fetching model predictions from the store"):
-    predictions_df = _load_predictions_from_store(
-        from_pickup_hour= pd.to_datetime(current_date - timedelta(hours=1)).tz_localize("UTC"),
-        to_pickup_hour=current_date
-    )
-    st.sidebar.write('✅ Model predictions arrived')
+with st.spinner(text="Fetching batch of features used in the last run"):
+    features_df = load_batch_of_features_from_store(current_date)
+    features_df['pickup_location'] = features_df['pickup_location'].str.lower().str.replace(r"[^a-z0-9\s]", "", regex=True)
+    st.sidebar.write('✅ Inference features fetched from the store')
     progress_bar.progress(2/N_STEPS)
+    print(f'{features_df}')
 
-# Here we are checking the predictions for the current hour have already been computed
-# and are available
-next_hour_predictions_ready = \
-    False if predictions_df[predictions_df.pickup_hour == current_date].empty else True
-prev_hour_predictions_ready = \
-    False if predictions_df[predictions_df.pickup_hour == (pd.to_datetime(current_date - timedelta(hours=1)).tz_localize("UTC"))].empty else True
+with st.spinner(text="Loading ML model from registry"):
+    model = load_model_from_registry()
+    st.sidebar.write('✅ ML model was load from the registry')
+    progress_bar.progress(3/N_STEPS)
 
-# breakpoint()
-
-if next_hour_predictions_ready:
-    # predictions for the current hour are available
-    predictions_df = predictions_df[predictions_df.pickup_hour == current_date]
-
-elif prev_hour_predictions_ready:
-    # predictions for current hour are not available, so we use previous hour predictions
-    predictions_df = predictions_df[predictions_df.pickup_hour == (pd.to_datetime(current_date - timedelta(hours=1)).tz_localize("UTC"))]
-    current_date = pd.to_datetime(current_date - timedelta(hours=1)).tz_localize("UTC")
-    st.subheader('⚠️ The most recent data is not yet available. Using last hour predictions')
-
-else:
-    raise Exception('Features are not available for the last 2 hours. Is your feature \
-                    pipeline up and running? 🤔')
+with st.spinner(text="Computing model predictions"):
+    predictions_df = get_model_predictions(model, features_df)
+    st.sidebar.write('✅ Model predictions arrived')
+    progress_bar.progress(4/N_STEPS)
 
 with st.spinner(text="Preparing data to plot"):
 
@@ -175,7 +120,7 @@ with st.spinner(text="Preparing data to plot"):
     df['color_scaling'] = df['predicted_demand']
     max_pred, min_pred = df['color_scaling'].max(), df['color_scaling'].min()
     df['fill_color'] = df['color_scaling'].apply(lambda x: pseudocolor(x, min_pred, max_pred, BLACK, GREEN))
-    progress_bar.progress(3/N_STEPS)
+    progress_bar.progress(5/N_STEPS)
 
 with st.spinner(text="Generating Chicago Map"):
 
@@ -212,12 +157,7 @@ with st.spinner(text="Generating Chicago Map"):
     )
 
     st.pydeck_chart(r)
-    progress_bar.progress(4/N_STEPS)
-
-with st.spinner(text="Fetching batch of features used in the last run"):
-    features_df = _load_batch_of_features_from_store(current_date)
-    st.sidebar.write('✅ Inference features fetched from the store')
-    progress_bar.progress(5/N_STEPS)
+    progress_bar.progress(6/N_STEPS)
 
 with st.spinner(text="Plotting time-series data"):
 
@@ -249,4 +189,4 @@ with st.spinner(text="Plotting time-series data"):
         )
         st.plotly_chart(fig, theme="streamlit", use_container_width=True, width=1000)
         
-    progress_bar.progress(6/N_STEPS)
+    progress_bar.progress(7/N_STEPS)
